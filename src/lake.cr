@@ -32,6 +32,20 @@ class Lake(T)
   end
 
   def dip_sync(&block : T ->)
-    @mutex.synchronize { @lake[(@cursor += 1) % @lake.size].first.send(block) }
+    chan = nil
+    @mutex.synchronize do
+      chan = @lake[(@cursor = (@cursor + 1) % @lake.size)].first
+    end
+    chan.not_nil!.send(block)
+  end
+
+  def leak_sync(&block : T->)
+    chan = nil
+    @mutex.synchronize do 
+      @cursor = (@cursor + 1) % @lake.size
+      chan = @lake[@cursor].first
+      @lake[@cursor] = {Channel(T ->).new, @factory.call}
+    end
+    chan.not_nil!.send(block)
   end
 end
