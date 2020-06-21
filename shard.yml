@@ -1,4 +1,4 @@
-name: pool
+name: lake
 version: 0.1.0
 
 authors:
@@ -8,7 +8,7 @@ crystal: 0.34.0
 
 license: MIT
 
-dev_dependencies:
+development_dependencies:
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.6.0
