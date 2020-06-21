@@ -1,9 +1,9 @@
 require "./spec_helper"
 
 describe Pool do
-  # TODO: Write tests
-
-  it "works" do
-    false.should eq(true)
+  it "fills correctly with default constructor" do
+    pool = Pool(Array(String)).new
+    pool.size.should eq Pool::DEFAULT_CAPACITY
+    pool.empty?.should eq false
   end
 end

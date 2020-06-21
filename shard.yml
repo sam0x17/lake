@@ -8,7 +8,7 @@ crystal: 0.34.0
 
 license: MIT
 
-dependencies:
+dev_dependencies:
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.6.0
