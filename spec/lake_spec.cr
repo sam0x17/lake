@@ -60,5 +60,21 @@ describe Lake do
       lake = Lake(Redis).new
       lake.size.should eq Lake::DEFAULT_CAPACITY
     end
+
+    it "allows contentious dipping on the same key" do
+      lake = Lake(Redis).new(8)
+      chan = Channel(Nil).new
+      100.times do |i|
+        spawn do
+          lake.dip do |redis|
+            redis.incrby("my-key", i)
+            chan.send(nil)
+          end
+        end
+      end
+      100.times { chan.receive }
+      lake.dip_sync { |redis| redis.get("my-key").not_nil!.to_i.should eq 4950 }
+      lake.dip_sync { |redis| redis.del("my-key") }
+    end
   end
 end
