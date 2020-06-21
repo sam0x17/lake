@@ -14,12 +14,24 @@ class Pool(T)
   end
 
   delegate size, to: @pool
+  
+  def [](index)
+    @pool[index][1]
+  end
+
+  def first
+    @pool.first[1]
+  end
+
+  def last
+    @pool.last[1]
+  end
 
   def dip(&block : T ->)
-    spawn { dip_sync(block) }
+    spawn { dip_sync(&block) }
   end
 
   def dip_sync(&block : T ->)
-    mutex.synchronize { @pool[(@cursor += 1) % @pool.size].first.send(block) }
+    @mutex.synchronize { @pool[(@cursor += 1) % @pool.size].first.send(block) }
   end
 end
