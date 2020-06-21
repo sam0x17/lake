@@ -14,7 +14,6 @@ class Pool(T)
   end
 
   delegate size, to: @pool
-  delegate empty?, to: @pool
 
   def dip(&block : T ->)
     spawn { dip_sync(block) }
