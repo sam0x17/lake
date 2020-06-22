@@ -87,6 +87,24 @@ describe Lake do
       end
     end
 
+    it "allows contentious dipping on the same key with a leak" do
+      Redis.new.del("lake-test-key")
+      lake = Lake(Redis).new(7)
+      lake.leak
+      chan = Channel(Nil).new
+      100.times do |i|
+        spawn do
+          lake.dip do |redis|
+            redis.incrby("lake-test-key", i)
+            chan.send(nil)
+          end
+        end
+      end
+      100.times { chan.receive }
+      lake.dip_sync { |redis| redis.get("lake-test-key").not_nil!.to_i.should eq 4950 }
+      lake.dip_sync { |redis| redis.del("lake-test-key") }
+    end
+
     it "allows use of leak for stuff like pub/sub" do
       Redis.new.del("lake-test-key")
       lake = Lake(Redis).new(10)
@@ -109,45 +127,33 @@ describe Lake do
     end
   
     it "allows use of leak for stuff like pub/sub with heavy contention" do
-      # Redis.new.del("lake-test-key")
-      # lake = Lake(Redis).new(7)
-      # redis = lake.leak
-      # pub_chan = Channel(Nil).new
-      # sum_chan = Channel(Nil).new
-      # resolved = Hash(Int32, Bool).new
-      # 100.times do |i|
-      #   resolved[i] = false
-      # end
-      # spawn do
-      #   redis.subscribe("lake-test-channel") do |on|
-      #     on.message do |channel, message|
-      #       redis.unsubscribe("lake-test-channel")
-      #       pub_chan.send(nil)
-      #     end
-      #   end
-      # end
-      # puts num = 0
-      # 100.times do |i|
-      #   spawn do
-      #     lake.dip do |red|
-      #       red.incrby("lake-test-key", i)
-      #       sum_chan.send(nil)
-      #       resolved[i] = true
-      #     end
-      #   end
-      # end
-      # puts "A"
-      # spawn do
-      #   sleep 5
-      #   pp resolved
-      # end
-      # 100.times { sum_chan.receive }
-      # puts "B"
-      # spawn { Redis.new.publish("lake-test-channel", "hey") }
-      # puts "C"
-      # pub_chan.receive
-      # lake.dip_sync { |red| red.get("lake-test-key").not_nil!.to_i.should eq 4950 }
-      # Redis.new.del("lake-test-key")
+      Redis.new.del("lake-test-key")
+      lake = Lake(Redis).new(7)
+      redis = lake.leak
+      pub_chan = Channel(Nil).new
+      sum_chan = Channel(Nil).new
+      resolved = Hash(Int32, Bool).new
+      spawn do
+        redis.subscribe("lake-test-channel") do |on|
+          on.message do |channel, message|
+            redis.unsubscribe("lake-test-channel")
+            pub_chan.send(nil)
+          end
+        end
+      end
+      100.times do |i|
+        spawn do
+          lake.dip do |red|
+            red.incrby("lake-test-key", i)
+            sum_chan.send(nil)
+          end
+        end
+      end
+      100.times { sum_chan.receive }
+      spawn { Redis.new.publish("lake-test-channel", "hey") }
+      pub_chan.receive
+      lake.dip_sync { |red| red.get("lake-test-key").not_nil!.to_i.should eq 4950 }
+      Redis.new.del("lake-test-key")
     end
   end
 end

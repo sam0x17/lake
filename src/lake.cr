@@ -3,13 +3,24 @@ class Lake(T)
 
   def initialize(capacity : Int32 = DEFAULT_CAPACITY, @factory : Proc(T) = ->{ T.new })
     @mutex = Mutex.new
-    @lake = Array(Tuple(Channel(T ->), T)).new(capacity)
+    @lake = Array(Tuple(Channel(T ->), T, Bool)).new(capacity)
     @cursor = 0
-    capacity.times do
+    capacity.times do |i|
       chan = Channel(T ->).new
       obj = @factory.call
-      @lake << {chan, obj}
-      spawn { loop { chan.receive.call(obj) } }
+      @lake << {chan, obj, true}
+      spawn_entry_event_loop(chan, obj, i)
+    end
+  end
+
+  private def spawn_entry_event_loop(chan : Channel(T ->), obj : T, i : Int32)
+    spawn do
+      loop do
+        should_break = false
+        @mutex.synchronize { should_break = !@lake[i][2] }
+        break if should_break
+        chan.receive.call(obj)
+      end
     end
   end
 
@@ -40,16 +51,15 @@ class Lake(T)
   end
 
   def leak : T
-    chan = nil
     obj = nil
     @mutex.synchronize do 
       @cursor = (@cursor + 1) % @lake.size
       chan, obj = @lake[@cursor] # channel to original
       new_chan = Channel(T ->).new
-      spawn { loop { new_chan.receive.call(obj.not_nil!) } } # event loop for new channel
-      @lake[@cursor] = {new_chan, @factory.call} # replacement
+      new_obj = @factory.call
+      @lake[@cursor] = {new_chan, new_obj, true} # replacement
+      spawn_entry_event_loop(new_chan, new_obj, @cursor)
     end
-    chan.not_nil!.send(->(o : T) {})
     obj.not_nil!
   end
 end
