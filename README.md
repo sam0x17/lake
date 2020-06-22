@@ -53,10 +53,10 @@ lake = Lake(Redis).new(50)
 ```
 
 The second optional parameter allows you to override the default "factory" (`T.new`) for
-newly created pool objects by passing a `-> T { }` block.
+newly created pool objects by passing a `->{ }` block returning a `T`.
 
 ```crystal
-lake = Lake(MyClass).new(25, -> { MyClass.new("some_arg") })
+lake = Lake(MyClass).new(25, ->{ MyClass.new("some_arg") })
 ```
 
 Pool objects are initialized at pool creation time using this block, and a new object
