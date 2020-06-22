@@ -45,7 +45,9 @@ class Lake(T)
     @mutex.synchronize do 
       @cursor = (@cursor + 1) % @lake.size
       chan, obj = @lake[@cursor] # channel to original
-      @lake[@cursor] = {Channel(T ->).new, @factory.call} # replacement
+      new_chan = Channel(T ->).new
+      spawn { loop { new_chan.receive.call(obj.not_nil!) } } # event loop for new channel
+      @lake[@cursor] = {new_chan, @factory.call} # replacement
     end
     chan.not_nil!.send(->(o : T) {})
     obj.not_nil!
