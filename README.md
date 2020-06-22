@@ -1,39 +1,47 @@
 # lake
+Lake is a generic connection pooling shard for the crystal programming language. With
+Lake, you can create a generically typed `Lake(T)` for whatever type of connection
+or object you want to work with.
 
-TODO: Write a description here
+## Overview
 
-## Installation
-
-1. Add the dependency to your `shard.yml`:
-
-   ```yaml
-   dependencies:
-     lake:
-       github: your-github-user/lake
-   ```
-
-2. Run `shards install`
-
-## Usage
+When you want to use a connection/object in the pool, simply call `#dip` /
+`lake.dip{ |connection| connection.do_stuff }` to asynchronously get a reference
+to a free connection in the pool and use it within the block you provide, or call
+`#dip_sync` with the same parameters for a synchronous version of `#dip`.
 
 ```crystal
-require "lake"
+lake = Lake(Redis).new
+lake.dip { |redis| puts redis.get("my-key") }
+lake.dip { |redis| redis.set("mey-key", "cool") }
+# no guarantee on run order since `#dip` is asynchronous
+```
+And using `#dip_sync`...
+
+```crystal
+lake = Lake(Redis).new
+lake.dip_sync { |redis| redis.set("my-key", "hello") }
+val = nil
+lake.dip_sync { |redis| val = redis.get("my-key") }
+val.should eq "hello"
 ```
 
-TODO: Write usage instructions here
+When using things like `redis` where certain connection operations, such as pub/sub,
+make the connection unusable for a period of time, you can use `#leak` which will
+return and remove a connection from the pool and replace it with a new one safely.
 
-## Development
+```crystal
+lake = Lake(Redis).new
+redis = lake.leak
+spawn do
+  redis.subscribe("my-key") do |on|
+  ...
+``
 
-TODO: Write development instructions here
+ Connections are returned by `dip` and `dip_sync` on a least-recently-used basis, to
+ ensure that we are always minimizing the chance that another operation is currently
+ in-progress on the returned connection.
 
-## Contributing
 
-1. Fork it (<https://github.com/your-github-user/lake/fork>)
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-## Contributors
-
-- [Sam Johnson](https://github.com/your-github-user) - creator and maintainer
+Lake maintains a channel for each connection in the pool which it uses to buffer incoming
+`dip` and `dip_sync` requests.
