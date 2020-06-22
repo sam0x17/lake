@@ -67,14 +67,44 @@ describe Lake do
       100.times do |i|
         spawn do
           lake.dip do |redis|
-            redis.incrby("my-key", i)
+            redis.incrby("lake-test-key", i)
             chan.send(nil)
           end
         end
       end
       100.times { chan.receive }
-      lake.dip_sync { |redis| redis.get("my-key").not_nil!.to_i.should eq 4950 }
-      lake.dip_sync { |redis| redis.del("my-key") }
+      lake.dip_sync { |redis| redis.get("lake-test-key").not_nil!.to_i.should eq 4950 }
+      lake.dip_sync { |redis| redis.del("lake-test-key") }
+    end
+
+    describe "#leak" do
+      it "takes an instance out of the pool and replaces it with a new one" do
+        lake = Lake(Redis).new(5)
+        redis = lake.leak
+        lake.size.times { |i| lake[i].should_not eq redis }
+        lake.size.should eq 5
+      end
+    end
+
+    it "allows use of leak for stuff like pub/sub with contention" do
+      lake = Lake(Redis).new(10)
+      redis = lake.leak
+      chan = Channel(Nil).new
+      chan2 = Channel(Nil).new
+      spawn do
+        redis.subscribe("lake-test-channel") do |on|
+          spawn { chan.send(nil) }
+          on.message do |channel, message|
+            redis.unsubscribe("lake-test-channel")
+            chan2.send(nil)
+          end
+        end
+      end
+      lake.dip do |red|
+        red.publish("lake-test-channel", "hey")
+        chan2.send(nil)
+      end
+      chan2.receive
     end
   end
 end

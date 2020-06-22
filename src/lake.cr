@@ -39,13 +39,15 @@ class Lake(T)
     chan.not_nil!.send(block)
   end
 
-  def leak_sync(&block : T->)
+  def leak : T
     chan = nil
+    obj = nil
     @mutex.synchronize do 
       @cursor = (@cursor + 1) % @lake.size
-      chan = @lake[@cursor].first
-      @lake[@cursor] = {Channel(T ->).new, @factory.call}
+      chan, obj = @lake[@cursor] # channel to original
+      @lake[@cursor] = {Channel(T ->).new, @factory.call} # replacement
     end
-    chan.not_nil!.send(block)
+    chan.not_nil!.send(->(o : T) {})
+    obj.not_nil!
   end
 end
