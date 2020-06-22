@@ -13,7 +13,7 @@ version of `#dip`.
 ```crystal
 lake = Lake(Redis).new
 lake.dip { |redis| puts redis.get("my-key") }
-lake.dip { |redis| redis.set("mey-key", "cool") }
+lake.dip { |redis| redis.set("my-key", "cool") }
 # no guarantee on run order since `#dip` is asynchronous
 ```
 And using `#dip_sync`...
