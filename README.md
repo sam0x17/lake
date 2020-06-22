@@ -5,10 +5,10 @@ or object you want to work with.
 
 ## Overview
 
-When you want to use a connection/object in the pool, simply call `#dip` /
-`lake.dip{ |connection| connection.do_stuff }` to asynchronously get a reference
-to a free connection in the pool and use it within the block you provide, or call
-`#dip_sync` with the same parameters for a synchronous version of `#dip`.
+When you want to use a connection/object in the pool, simply call `#dip` to
+asynchronously get a reference to a free connection in the pool and use it within
+the block you provide, or call `#dip_sync` with the same parameters for a synchronous
+version of `#dip`.
 
 ```crystal
 lake = Lake(Redis).new
@@ -36,7 +36,7 @@ redis = lake.leak
 spawn do
   redis.subscribe("my-key") do |on|
   ...
-``
+```
 
  Connections are returned by `dip` and `dip_sync` on a least-recently-used basis, to
  ensure that we are always minimizing the chance that another operation is currently
