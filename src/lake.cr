@@ -25,7 +25,7 @@ class Lake(T)
   end
 
   delegate size, to: @lake
-  
+
   def [](index)
     @lake[index][1]
   end
@@ -52,7 +52,7 @@ class Lake(T)
 
   def leak : T
     obj = nil
-    @mutex.synchronize do 
+    @mutex.synchronize do
       @cursor = (@cursor + 1) % @lake.size
       chan, obj = @lake[@cursor] # channel to original
       new_chan = Channel(T ->).new

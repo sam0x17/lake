@@ -23,7 +23,7 @@ describe Lake do
       Lake::DEFAULT_CAPACITY.times { lake.dip { |hash| hash[:test] = 3 } }
       Lake::DEFAULT_CAPACITY.times { lake.dip { |hash| hash[:test].should eq 3 } }
     end
-  
+
     it "works with basic objects asynchronously" do
       lake = Lake(Hash(Symbol, Int32)).new(1000)
       chan = Channel(Nil).new
@@ -125,7 +125,7 @@ describe Lake do
       end
       chan2.receive
     end
-  
+
     it "allows use of leak for stuff like pub/sub with heavy contention" do
       Redis.new.del("lake-test-key")
       lake = Lake(Redis).new(7)
