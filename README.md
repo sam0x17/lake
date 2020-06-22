@@ -42,6 +42,35 @@ spawn do
  ensure that we are always minimizing the chance that another operation is currently
  in-progress on the returned connection.
 
-
 Lake maintains a channel for each connection in the pool which it uses to buffer incoming
 `dip` and `dip_sync` requests.
+
+You can also overload the default constructor which calls `.new` on whatever object you
+have decided to use as a pool entry type, as well as specify the size of the lake.
+
+```crystal
+lake = Lake(Redis).new(50)
+```
+
+The second optional parameter allows you to override the default "factory" (`T.new`) for
+newly created pool objects by passing a `-> T { }` block.
+
+```crystal
+lake = Lake(MyClass).new(25, -> { MyClass.new("some_arg") })
+```
+
+Pool objects are initialized at pool creation time using this block, and a new object
+is also initialized each time you call `lake.leak`.
+
+If you do not specify a pool size, the default is `24` (`Lake::DEFAULT_CAPACITY`).
+
+## How it Works
+A thread-safe queue (channel) is maintained for each object in the pool. When you pass
+a block that takes a pool object to `dip_sync` or `dip`, the block is sent over the
+appropriate channel and processed when the pool object is done with any other pending
+jobs that were already queued for it specifically. Pool objects are accessed via a
+least-recently-used pattern to minimize the chances that you are given a pool object
+that is still busy.
+
+An event loop is also created for each pool object. The event loop will run until
+the object is taken out of the pool via `leak` or until `clear` is called.

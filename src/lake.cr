@@ -43,10 +43,12 @@ class Lake(T)
   end
 
   def dip(&block : T ->)
+    raise "no pool objects available" unless @lake.size > 0
     spawn { dip_sync(&block) }
   end
 
   def dip_sync(&block : T ->)
+    raise "no pool objects available" unless @lake.size > 0
     chan = nil
     @mutex.synchronize do
       chan = @lake[(@cursor = (@cursor + 1) % @lake.size)].first
@@ -69,5 +71,19 @@ class Lake(T)
     chan.not_nil!.send(->(t : T) {}) # block until old object is done
     @mutex.synchronize { @live[chan.not_nil!] = false } # kill old event loop
     obj.not_nil! # return now unused and unassociated object
+  end
+
+  def clear : Array(T)
+    arr = [] of T
+    @mutex.synchronize do
+      @lake.each do |tuple|
+        chan, obj = tuple
+        chan.send(->(t : T) {})
+        arr << obj
+      end
+      @lake.clear
+      @capacity = 0
+    end
+    arr
   end
 end
