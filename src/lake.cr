@@ -1,7 +1,6 @@
 class Lake(T)
   DEFAULT_CAPACITY = 24
   DEFAULT_TTL = 1.5.seconds
-  @@current_id : Int64 = 0
 
   property ttl : Time::Span
 
@@ -15,7 +14,6 @@ class Lake(T)
       obj = @factory.call
       @lake << {chan, obj}
       @live << chan
-      @@current_id += 1
       spawn_entry_event_loop(chan, obj)
     end
   end
