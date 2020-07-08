@@ -13,7 +13,7 @@ describe Lake do
   end
 
   it "fills correctly when specifying a custom factory" do
-    lake = Lake(Int32).new(11, ->{ 7 })
+    lake = Lake(Int32).new(11, Lake::DEFAULT_TTL, ->{ 7 })
     lake.size.should eq 11
   end
 
@@ -154,6 +154,15 @@ describe Lake do
       pub_chan.receive
       lake.dip_sync { |red| red.get("lake-test-key").not_nil!.to_i.should eq 4950 }
       Redis.new.del("lake-test-key")
+    end
+
+    it "replaces connections that have timed out" do
+      lake = Lake(Redis).new(2, 5.milliseconds)
+      100.times do
+        lake.dip_sync do |red|
+          sleep 6.milliseconds
+        end
+      end
     end
   end
 end
